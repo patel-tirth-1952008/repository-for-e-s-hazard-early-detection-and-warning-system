@@ -147,9 +147,267 @@
 
 
 
-<footer>
+
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+
+  <style>
+    body{
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f7fb;
+      color: #222;
+    }
+
+    .main-section{
+      padding: 30px 20px;
+      text-align: center;
+      background: white;
+    }
+
+    .main-section h1{
+      color: #0b5ed7;
+      margin-bottom: 10px;
+    }
+
+    .main-section p{
+      max-width: 800px;
+      margin: auto;
+      line-height: 1.6;
+    }
+
+    .image-row{
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .image-row img{
+      width: 250px;
+      height: 160px;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+
+    .login-section{
+      max-width: 550px;
+      margin: 40px auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+
+    .login-section h2{
+      text-align: center;
+      color: #0b5ed7;
+    }
+
+    input, button{
+      width: 100%;
+      padding: 12px;
+      margin-top: 12px;
+      box-sizing: border-box;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    button{
+      background: #0b5ed7;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover{
+      background: #084298;
+    }
+
+    .hidden{
+      display: none;
+    }
+
+    .card{
+      background: #eef4ff;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+    }
+
+    #dashboard h3{
+      margin-bottom: 5px;
+    }
+
+    footer {
+      background-color: #0a3d62;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
+
+<body>
+
+  
+
+  <!-- LOGIN SECTION BELOW YOUR WEBSITE -->
+  <section class="login-section">
+    <div id="loginBox">
+      <h2>User Login</h2>
+      <input type="text" id="city" placeholder="Enter your city">
+      <input type="text" id="area" placeholder="Enter your area">
+      <input type="text" id="pincode" placeholder="Enter your pincode">
+      <button onclick="loginUser()">Login</button>
+    </div>
+
+    <div id="dashboard" class="hidden">
+      <h2 id="welcomeText"></h2>
+      <button onclick="enableNotifications()">Enable Notifications</button>
+
+      <div class="card">
+        <h3>Temperature</h3>
+        <p id="temp">Loading...</p>
+      </div>
+
+      <div class="card">
+        <h3>Wind Speed</h3>
+        <p id="wind">Loading...</p>
+      </div>
+
+      <div class="card">
+        <h3>Weather Status</h3>
+        <p id="weather">Loading...</p>
+      </div>
+
+      <div class="card">
+        <h3>Recent Natural Events</h3>
+        <p id="events">Loading...</p>
+      </div>
+
+      <div class="card">
+        <h3>Short-Term Warning</h3>
+        <p id="warning">Checking...</p>
+      </div>
+    </div>
+      
+  </section>
+  <footer>
     <p>© 2026 PredictSafe AI | Predict Before It Strikes</p>
-</footer>
+  </footer>
+  <script>
+    function loginUser() {
+      let city = document.getElementById("city").value.trim();
+      let area = document.getElementById("area").value.trim();
+      let pincode = document.getElementById("pincode").value.trim();
+
+      if(city === "" || area === "" || pincode === ""){
+        alert("Please fill all details");
+        return;
+      }
+
+      document.getElementById("loginBox").classList.add("hidden");
+      document.getElementById("dashboard").classList.remove("hidden");
+      document.getElementById("welcomeText").innerText =
+        "Welcome - " + city + ", " + area + " (" + pincode + ")";
+
+      getWeather(city);
+      getNaturalEvents();
+    }
+
+    async function getWeather(city) {
+      try {
+        let geoUrl = "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(city) + "&count=1";
+        let geoRes = await fetch(geoUrl);
+        let geoData = await geoRes.json();
+
+        if (!geoData.results || geoData.results.length === 0) {
+          alert("City not found");
+          return;
+        }
+
+        let lat = geoData.results[0].latitude;
+        let lon = geoData.results[0].longitude;
+
+        let weatherUrl = "https://api.open-meteo.com/v1/forecast?latitude=" + lat +
+                         "&longitude=" + lon +
+                         "&current=temperature_2m,wind_speed_10m,weather_code";
+
+        let weatherRes = await fetch(weatherUrl);
+        let weatherData = await weatherRes.json();
+
+        let temperature = weatherData.current.temperature_2m;
+        let windSpeed = weatherData.current.wind_speed_10m;
+        let weatherCode = weatherData.current.weather_code;
+
+        document.getElementById("temp").innerText = temperature + " °C";
+        document.getElementById("wind").innerText = windSpeed + " km/h";
+        document.getElementById("weather").innerText = "Code: " + weatherCode;
+
+        let warningText = "No immediate danger detected";
+
+        if (windSpeed > 40) {
+          warningText = "High wind warning in short term";
+          sendNotification("High wind warning in your area");
+        }
+
+        if (temperature > 40) {
+          warningText = "Heat warning in short term";
+          sendNotification("Extreme heat warning in your area");
+        }
+
+        document.getElementById("warning").innerText = warningText;
+
+      } catch (error) {
+        document.getElementById("temp").innerText = "Error";
+        document.getElementById("wind").innerText = "Error";
+        document.getElementById("weather").innerText = "Error";
+        document.getElementById("warning").innerText = "Could not check warning";
+      }
+    }
+
+    async function getNaturalEvents() {
+      try {
+        let res = await fetch("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson");
+        let data = await res.json();
+
+        if (data.features && data.features.length > 0) {
+          let eventList = data.features.slice(0, 3).map(function(item) {
+            return item.properties.place;
+          });
+
+          document.getElementById("events").innerText = eventList.join(" | ");
+          sendNotification("Recent natural event updates available");
+        } else {
+          document.getElementById("events").innerText = "No recent events found";
+        }
+      } catch (error) {
+        document.getElementById("events").innerText = "Could not load events";
+      }
+    }
+
+    function enableNotifications() {
+      Notification.requestPermission().then(function(permission) {
+        if (permission === "granted") {
+          alert("Notifications enabled successfully");
+        } else {
+          alert("Notification permission denied");
+        }
+      });
+    }
+
+    function sendNotification(message) {
+      if (Notification.permission === "granted") {
+        new Notification(message);
+      }
+    }
+  </script>
 
 </body>
 </html>
